@@ -43,8 +43,10 @@ async def send_message(thread_id: str, message_data: MessageCreateRequest):
         user_message_id = f"msg_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_user_{os.urandom(4).hex()}"
         assistant_message_id = f"msg_{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_assistant_{os.urandom(4).hex()}"
         
-        # Simulate AI response (in real implementation, call AI service)
-        ai_response = f"Tôi đã nhận được tin nhắn của bạn: '{message_data.content}'. Đây là phản hồi từ AI Assistant."
+        # Call AI service to get response
+        from services.ai_service import AIService
+        ai_result = await AIService.process_message(message_data.content)
+        ai_response = ai_result["content"]
         
         # Save messages to MongoDB
         db = await get_database()
@@ -81,12 +83,12 @@ async def send_message(thread_id: str, message_data: MessageCreateRequest):
             assistant_message_id=assistant_message_id,
             assistant={
                 "content": ai_response,
-                "model": "gpt-3.5-turbo",
-                "usage": {
-                    "prompt_tokens": 10,
-                    "completion_tokens": 20,
-                    "total_tokens": 30
-                }
+                "model": ai_result.get("model", "gpt-3.5-turbo"),
+                "usage": ai_result.get("usage", {
+                    "prompt_tokens": 0,
+                    "completion_tokens": 0,
+                    "total_tokens": 0
+                })
             }
         )
         
